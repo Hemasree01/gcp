@@ -1,4 +1,7 @@
 # cloudbuild.yaml
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 steps:
   # Step 1: Build the Docker image.
   - name: "gcr.io/cloud-builders/docker"
@@ -24,7 +27,7 @@ steps:
       - --image
       - gcr.io/cobalt-passkey-450515-h3/my-api-image
       - --region
-      - uscentral1
+      - us-central1
       - --platform
       - managed
       - --allow-unauthenticated
