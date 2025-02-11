@@ -1,0 +1,30 @@
+# cloudbuild.yaml
+steps:
+  # Step 1: Build the Docker image.
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - -t
+      - gcr.io/cobalt-passkey-450515-h3/my-api-image
+      - .
+
+  # Step 2: Push the image to Google Container Registry.
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - gcr.io/cobalt-passkey-450515-h3/my-api-image
+
+  # Step 3: Deploy to Cloud Run.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      - run
+      - deploy
+      - my-api-service
+      - --image
+      - gcr.io/cobalt-passkey-450515-h3/my-api-image
+      - --region
+      - uscentral1
+      - --platform
+      - managed
+      - --allow-unauthenticated
