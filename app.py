@@ -141,5 +141,6 @@ def index():
     return "API is up and running!"
 
 if __name__ == "__main__":
-    # For local testing
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    # Use the PORT environment variable if set, defaulting to 8080
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
