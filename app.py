@@ -82,7 +82,7 @@ def retrieve_and_process_pdfs():
         print("Error saving cache:", e)
 
     return embeddings
-
+   
 def query_and_generate_answer(query, embeddings):
     if not embeddings:
         return "No documents available for generating an answer."
@@ -126,7 +126,7 @@ def query_and_generate_answer(query, embeddings):
 
 # Pre-load and cache embeddings at startup (optional)
 EMBEDDINGS = retrieve_and_process_pdfs()
-
+print(EMBEDDINGS)
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.get_json()
