@@ -134,7 +134,7 @@ def ask():
         return jsonify({"error": "Missing 'query' in request"}), 400
     query = data["query"]
     answer = query_and_generate_answer(query, EMBEDDINGS)
-    return jsonify({"answer": EMBEDDINGS})
+    return jsonify({"answer": answer})
 
 @app.route("/", methods=["GET"])
 def index():
