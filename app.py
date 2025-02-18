@@ -17,8 +17,8 @@ embedding_model = TextEmbeddingModel.from_pretrained("text-embedding-005")
 generation_model = GenerativeModel("gemini-1.5-pro-002")
 
 BUCKET_NAME = "research_gcp"
-PREFIX = "documents/"
-CACHE_FILE = "embeddings_cache.pkl"
+DOCS_PREFIX = "documents/"
+CACHE_BLOB_NAME = "cache/embeddings_cache.pkl"
 MAX_TEXT_LENGTH = 2000  # Adjust as needed
 
 def split_text_into_chunks(text, max_length=MAX_TEXT_LENGTH):
@@ -35,18 +35,42 @@ def split_text_into_chunks(text, max_length=MAX_TEXT_LENGTH):
         chunks.append(current_chunk)
     return chunks
 
-def retrieve_and_process_pdfs():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "rb") as f:
-                embeddings = pickle.load(f)
-            print("Loaded embeddings from cache.")
+def load_cache_from_gcs():
+    """Load the embeddings cache from Cloud Storage if it exists."""
+    try:
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(CACHE_BLOB_NAME)
+        if blob.exists():
+            cache_bytes = blob.download_as_bytes()
+            embeddings = pickle.loads(cache_bytes)
+            print("Loaded embeddings from GCS cache.")
             return embeddings
-        except Exception as e:
-            print("Error loading cache:", e)
+        else:
+            print("Cache blob does not exist in GCS.")
+            return None
+    except Exception as e:
+        print("Error loading cache from GCS:", e)
+        return None
+
+def save_cache_to_gcs(embeddings):
+    """Save the embeddings cache to Cloud Storage."""
+    try:
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(CACHE_BLOB_NAME)
+        cache_bytes = pickle.dumps(embeddings)
+        blob.upload_from_string(cache_bytes)
+        print("Embeddings cached to GCS successfully.")
+    except Exception as e:
+        print("Error saving cache to GCS:", e)
+
+def retrieve_and_process_pdfs():
+    # Attempt to load from GCS cache first
+    embeddings = load_cache_from_gcs()
+    if embeddings is not None:
+        return embeddings
 
     bucket = storage_client.bucket(BUCKET_NAME)
-    blobs = bucket.list_blobs(prefix=PREFIX)
+    blobs = bucket.list_blobs(prefix=DOCS_PREFIX)
     embeddings = []
 
     for blob in blobs:
@@ -74,15 +98,9 @@ def retrieve_and_process_pdfs():
             except Exception as e:
                 print(f"Error processing {blob.name}: {e}")
 
-    try:
-        with open(CACHE_FILE, "wb") as f:
-            pickle.dump(embeddings, f)
-        print("Embeddings cached successfully.")
-    except Exception as e:
-        print("Error saving cache:", e)
-
+    save_cache_to_gcs(embeddings)
     return embeddings
-   
+
 def query_and_generate_answer(query, embeddings):
     if not embeddings:
         return "No documents available for generating an answer."
@@ -127,6 +145,7 @@ def query_and_generate_answer(query, embeddings):
 # Pre-load and cache embeddings at startup (optional)
 EMBEDDINGS = retrieve_and_process_pdfs()
 print(EMBEDDINGS)
+
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.get_json()
